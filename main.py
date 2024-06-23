@@ -3,13 +3,14 @@ import json
 import cv2
 import numpy as np
 from utils import scale_polygon, upscale_image
-from utils import mask2polygon, get_area, get_bbox, normalize_polygons
+from utils import mask2polygon, get_area, get_bbox, normalize_polygons, get_bbox_from_mask
+from label_studio_converter import brush
 
 def process_images(input_folder, output_json):
     data = {
         "info": {
             "year": "2024",
-            "version": "1",
+            "version": "2",
             "description": "Mentally ill",
             "contributor": "Mert",
             "url": "url",
@@ -47,18 +48,14 @@ def process_images(input_folder, output_json):
             filepath = os.path.join(input_folder, filename)
             image = cv2.imread(filepath, cv2.IMREAD_GRAYSCALE)
             height, width = image.shape[:2]
-            _, binary_mask = cv2.threshold(image, 127, 255, cv2.THRESH_BINARY)
-            
-            upscaled_image = upscale_image(binary_mask, 2.0)
-            upscaled_image = cv2.GaussianBlur(upscaled_image, (3, 3), 0)
-            _, upscaled_image = cv2.threshold(upscaled_image, 127, 255, cv2.THRESH_BINARY)
 
-            polygons = mask2polygon(upscaled_image)
-            scaled_polygons = scale_polygon(polygons, 2, 2)
+            _, binary_mask = cv2.threshold(image, 127, 1, cv2.THRESH_BINARY)
+            mask = binary_mask.astype(np.uint8)*255
+            area_pixels = cv2.countNonZero(binary_mask)
 
-            area = get_area(scaled_polygons)
-            bbox = get_bbox(scaled_polygons)
-            normalized_polygons = normalize_polygons(polygons, upscaled_image.shape)
+            bbox = get_bbox_from_mask(binary_mask)
+
+            rle = brush.mask2rle(mask)
 
             data["images"].append({
                 "id": image_id,
@@ -73,8 +70,8 @@ def process_images(input_folder, output_json):
                 "id": annotation_id,
                 "image_id": image_id,
                 "category_id": 1,
-                "segmentation": scaled_polygons,
-                "area": area,
+                "segmentation": rle,
+                "area": area_pixels,
                 "bbox": bbox,
                 "iscrowd": 0
             })
@@ -86,7 +83,7 @@ def process_images(input_folder, output_json):
         json.dump(data, outfile, indent=4)
 
 if __name__ == "__main__":
-    input_folder = "/Users/mert/Downloads/CocoDengeliSegData/train"
-    output_json = "/Users/mert/Downloads/CocoDengeliSegData/ann/coco_train_ann.json"
+    input_folder = "/Users/mert/Downloads/CocoDengeliSegData/val"
+    output_json = "/Users/mert/Downloads/CocoDengeliSegData/ann/coco_val_ann.json"
 
     process_images(input_folder, output_json)

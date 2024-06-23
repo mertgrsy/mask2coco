@@ -3,6 +3,29 @@ import json
 import cv2
 import numpy as np
 
+def get_bbox_from_mask(mask):
+    """
+    Returns the bounding box coordinates for a binary mask.
+
+    :param mask: Input binary mask
+    :return: Bounding box coordinates (x, y, width, height)
+    """
+    # Find contours in the mask
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Ensure at least one contour was found
+    if len(contours) == 0:
+        return None
+
+    # Get the largest contour (if there are multiple)
+    largest_contour = max(contours, key=cv2.contourArea)
+
+    # Get the bounding box coordinates
+    x, y, w, h = cv2.boundingRect(largest_contour)
+
+    return [x, y, x+w, y+h]
+
+
 def normalize_polygons(polygons, image_shape):
     """
     Poligonlari [0, 1] araligina normalize eder.
