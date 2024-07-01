@@ -1,2 +1,2 @@
 With this tool you can convert your mask annotations to coco json.
-It's use polygons but you can also implament rle version.
+Main is use polygons rle branch is use rle.
